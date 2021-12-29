@@ -29,28 +29,60 @@ import os
 # import CTRP data from dashboard this is only OnCore Accrual
 #importing an excel file
 
-file_name=input('File path to pull data:')
+file_name=input('File path to pull MCC data:')
+file_name_2=input('File path from accrual type:')
 ctrp=pd.read_excel(file_name)
 #dropping the title column since it would not be nessessary 
 ctrp=ctrp.drop('TITLE', axis=1)
 
-# #load in list of excel that I extracted from STRAP with trials that are fully registered
-# # I did use excel manually first - but just plan to do this peridically every month by doing a new download
-# full_reg=pd.read_excel('C:/Filepath/file_name.xlsx')
+#load in list of excel that I extracted from STRAP with trials that are fully registered
+# I did use excel manually first - but just plan to do this peridically every month by doing a new download
+full_reg=pd.read_excel(file_name_2)
 
-# #make a list of all the trials that are fully registered
-# list_reg=list(full_reg['NCI Trial Identifier'])
+#make a list of all the trials that are fully registered
+list_reg=list(full_reg['NCI Trial Identifier'])
 
-# #keep only rows from all the OnCore accrual with fully register trials in CTRP
-# ctrp_full_reg= ctrp[ctrp['NCI Trial ID'].isin(list_reg)]
+#keep only rows from all the OnCore accrual with fully register trials in CTRP
+ctrp= ctrp[ctrp['NCI Trial ID'].isin(list_reg)]
 
 # #drop all trials that do not have an on study date - they are not on study
-# ctrp_full_reg = ctrp_full_reg.dropna(subset=['FIRST_ONSTUDY_CREATED_DATE'])
+ctrp = ctrp.dropna(subset=['FIRST_ONSTUDY_CREATED_DATE'])
 
 
 
 # #data that is complete - has all the data elements necessary to be registered to CTRP
 # complete= ctrp_full_reg[~ctrp_full_reg.isnull().any(axis=1)]
+
+
+
+#=========================code in development==================
+
+#note:this only works for CTO trials for other trials please make sure they have sequence numbers
+out=list(ctrp.groupby(ctrp['NCI Trial ID']))
+
+out_clean=[]
+import re
+for index, tuple in enumerate(out):
+    element_dataframe=tuple[1]
+    count_na=element_dataframe['Sequence Number'].isna().sum()
+    element_dataframe['Sequence Number']=element_dataframe['Sequence Number'].astype(str)
+    if count_na>0:
+        nci_id=element_dataframe['Protocol No'].values[0]
+        print(nci_id)
+        pattern = r'[NTLS]'
+        mod_string = re.sub(pattern, '', nci_id)
+        mod_string = mod_string[2:]
+        for ind, column in enumerate(element_dataframe['Sequence Number']):
+            if str(column)=='nan':
+                column=mod_string+'UNK'+str(ind)
+                element_dataframe['Sequence Number'].iloc[ind]=element_dataframe['Sequence Number'].iloc[ind].replace('nan', column)
+    else:
+        element_dataframe  
+    out_clean.append(element_dataframe)
+    
+ctrp = pd.concat(out_clean)
+              
+    
 
 #================STEP 2 - Data Formatting==========================
 #date clean up - for On Study date
@@ -161,6 +193,10 @@ for r in  list_h:
         news='9861/3'
     if news=='9863':
         news='9863/3'
+    if news=='9805':
+        news='9805/3'
+    if news=='9975/1':
+        news='9960/3'
     new_hist.append(news)
     
 disease_code=[]
@@ -189,7 +225,7 @@ ctrp['Gender'].replace(['F','M', 'U',np.nan],['Female','Male','Unknown','Unknown
 #any study site code
 ctrp['Study Site'].replace(['Masonic Cancer Center', 'University of Minnesota','Brown','Duke'],[139049,139049,212961,149280],inplace=True)
 #race that may be collected differently
-ctrp['Race'].replace(['Patient Refusal','More than One Race'],['Not Reported', 'Unknown'],inplace=True)
+ctrp['Race'].replace(['Patient Refusal','More than One Race','More than One race'],['Not Reported', 'Unknown','Unknown'],inplace=True)
 ctrp['Race'].replace(['White (Caucasian)','Native American, Alaskan Native','Other',np.nan,'Asian/Pacific Islander'],['White', 'American Indian or Alaska Native','Unknown','Unknown','Asian'],inplace=True)
 
 #ethnicity that may be collected differently
