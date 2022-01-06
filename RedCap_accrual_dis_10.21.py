@@ -30,19 +30,25 @@ import os
 #importing an excel file
 
 file_name=input('File path to pull data:')
+file_name_2=input('File path from accrual type:')
+
 ctrp=pd.read_excel(file_name)
 #dropping the title column since it would not be nessessary 
 # ctrp=ctrp.drop('TITLE', axis=1)
+
+
+#PUll accural type:
+full_reg=pd.read_excel(file_name_2)
 
 # #load in list of excel that I extracted from STRAP with trials that are fully registered
 # # I did use excel manually first - but just plan to do this peridically every month by doing a new download
 # full_reg=pd.read_excel('C:/Filepath/file_name.xlsx')
 
 # #make a list of all the trials that are fully registered
-# list_reg=list(full_reg['NCI Trial Identifier'])
+list_reg=list(full_reg['NCI Trial Identifier'])
 
 # #keep only rows from all the OnCore accrual with fully register trials in CTRP
-# ctrp_full_reg= ctrp[ctrp['NCI Trial ID'].isin(list_reg)]
+ctrp= ctrp[ctrp['NCI ID'].isin(list_reg)]
 
 # #drop all trials that do not have an on study date - they are not on study
 # ctrp_full_reg = ctrp_full_reg.dropna(subset=['FIRST_ONSTUDY_CREATED_DATE'])
@@ -75,7 +81,7 @@ for z in list_s:
 ctrp['On Study Date']=new_dates
 
 #Birthdates that do not exist are replaces with this place holder
-ctrp['Date of Birth'] = ctrp['Date of Birth'].replace([np.nan,'7/1776','07/1776'], 190007)
+ctrp['Date of Birth'] = ctrp['Date of Birth'].replace([np.nan,'7/1776','07/1776','177688'], 190007)
 
 #birthdates formatting
 list_b =list(ctrp['Date of Birth'])
@@ -105,9 +111,13 @@ for b in list_b:
 # replace all birthdates       
 ctrp['Date of Birth']=new_list
 
+ctrp['Date of Birth'] = ctrp['Date of Birth'].replace([np.nan,'7/1776','07/1776','177688','88/1776'], 190007)
+
+
 #ZIP code formatting
 #add zeros to nan in zip code
 ctrp['Zip'] =ctrp['Zip'].replace(np.nan, '00000')
+ctrp['Zip'] =ctrp['Zip'].replace('0', '00000')
 #reduce zip code to only 5 numbers
 list_z =ctrp['Zip'] 
 new_z =[]
@@ -164,16 +174,17 @@ ctrp['Index'] = ctrp.apply(lambda _: 'PATIENTS', axis=1)
 #Gender
 ctrp['Gender'].replace(['F','M', 'U',np.nan],['Female','Male','Unknown','Unknown'],inplace=True)
 #any study site code
-ctrp['Study Site'].replace(['Masonic Cancer Center', 'University of Minnesota','Brown','Duke'],[139049,139049,212961,149280],inplace=True)
+ctrp['Study Site'].replace(['Masonic Cancer Center', 'University of Minnesota','139049 UMN / MCC','139049 UMN / MCC',139040,'1','Brown','Duke'],[139049,139049,139049,139049,139049,139049,212961,149280],inplace=True)
 #race that may be collected differently
 ctrp['Race'].replace(['Patient Refusal','More than One race'],['Not Reported', 'Unknown'],inplace=True)
 ctrp['Race'].replace(['White (Caucasian)','Native American, Alaskan Native','Other',np.nan,'Asian/Pacific Islander'],['White', 'American Indian or Alaska Native','Unknown','Unknown','Asian'],inplace=True)
 
 #ethnicity that may be collected differently
-ctrp['Ethnicity'].replace(['Non-Hispanic','Patient Refusal','More than One race','88'],['Not Hispanic or Latino','Not Reported', 'Unknown','Unknown'],inplace=True)
+ctrp['Ethnicity'].replace(['Non-Hispanic','Patient Refusal','More than One race','88','Hispanic'],['Not Hispanic or Latino','Not Reported', 'Unknown','Unknown','Hispanic or Latino'],inplace=True)
 #some disease sites are not correctly programmed in OnCore so I need to replace them there - this is a place to do that
 #ATTENTION -> complete['Disease Site'].replace(['C42.1;9861 ','C42.0;9650 ','C42.0;9861 ','C42.1;9823 '],['C42.1;9861/3' ,'C42.0;9650/3','C42.0;9861/3','C42.1;9823/3'], inplace=True)
 ctrp['Disease Code'].replace(['Z1000','620.20'],['V100','620.2'],inplace=True)
+ctrp['Disease Code'].replace(['Healthy Volunteer V99','V99 - Healthy Volunteer','1'],'V99',inplace=True)
 
 ctrp.columns
 #make a df containg race
@@ -187,7 +198,8 @@ race['Race'].unique()
 #drop the last column and reoganize df
 #complete=complete.drop(columns=[ 'FIRST_ONSTUDY_CREATED_DATE'])
 main=ctrp[['Index','NCI ID', 'Sequence No','Zip', 'Country','Date of Birth','Gender','Ethnicity','Payment Method','On Study Date','County Code','Study Site', 'nine','Disease Code','end']]
-
+main['Zip'] =main['Zip'].replace('0', '00000')
+main['Study Site'].replace([139040],[139049],inplace=True)
 
 #=====================STEP 3 Prepare data for Text files=============
 #need to seperate the data into trials for the main df and the RACE df
@@ -234,7 +246,7 @@ import re
 #loop through trial numbers
 for ind, name in enumerate(trials_name):
     #set up the files names with date (instruction from CTRP) and make sure to write into file
-    file=open('{}_20211014.txt'.format(name),"w")
+    file=open('{}_20220106.txt'.format(name),"w")
     file.write('"COLLECTIONS"'+','+'"{}"'.format(name)+ ','*9 +'"1"')
     # this means 'enter' move to new line
     file.write('\n')
